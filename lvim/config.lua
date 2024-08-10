@@ -7,80 +7,80 @@ lvim.keys.insert_mode["<C-s>"] = "<cmd>w<cr>"
 lvim.keys.normal_mode["<C-a>"] = "ggVG"
 lvim.keys.normal_mode["<S-l>"] = ":BufferLineCycleNext<CR>"
 lvim.keys.normal_mode["<S-h>"] = ":BufferLineCyclePrev<CR>"
--- require("nvim-treesitter.configs").setup({
---   -- Add languages to be installed here that you want installed for treesitter
---   ensure_installed = {
---     "go",
---     "lua",
---     "python",
---     "rust",
---     "typescript",
---     "regex",
---     "bash",
---     "markdown",
---     "markdown_inline",
---     "kdl",
---     "sql",
---   },
+require("nvim-treesitter.configs").setup({
+  -- Add languages to be installed here that you want installed for treesitter
+  ensure_installed = {
+    "go",
+    "lua",
+    "python",
+    "rust",
+    "typescript",
+    "regex",
+    "bash",
+    "markdown",
+    "markdown_inline",
+    "kdl",
+    "sql",
+  },
 
---   highlight = { enable = true },
---   indent = { enable = true },
---   incremental_selection = {
---     enable = true,
---     keymaps = {
---       init_selection = "<c-space>",
---       node_incremental = "<c-space>",
---       scope_incremental = "<c-s>",
---       node_decremental = "<c-backspace>",
---     },
---   },
---   textobjects = {
---     select = {
---       enable = true,
---       lookahead = true, -- Automatically jump forward to textobj, similar to targets.vim
---       keymaps = {
---         -- You can use the capture groups defined in textobjects.scm
---         ["aa"] = "@parameter.outer",
---         ["ia"] = "@parameter.inner",
---         ["af"] = "@function.outer",
---         ["if"] = "@function.inner",
---         ["ac"] = "@class.outer",
---         ["ic"] = "@class.inner",
---         ["il"] = "@loop.inner",
---         ["al"] = "@loop.outer",
---       },
---     },
---     move = {
---       enable = true,
---       set_jumps = true, -- whether to set jumps in the jumplist
---       goto_next_start = {
---         ["]m"] = "@function.outer",
---         ["]]"] = "@class.outer",
---       },
---       goto_next_end = {
---         ["]M"] = "@function.outer",
---         ["]["] = "@class.outer",
---       },
---       goto_previous_start = {
---         ["[m"] = "@function.outer",
---         ["[["] = "@class.outer",
---       },
---       goto_previous_end = {
---         ["[M"] = "@function.outer",
---         ["[]"] = "@class.outer",
---       },
---     },
---     swap = {
---       enable = true,
---       swap_next = {
---         ["<leader>a"] = "@parameter.inner",
---       },
---       swap_previous = {
---         ["<leader>A"] = "@parameter.inner",
---       },
---     },
---   },
--- })
+  highlight = { enable = true },
+  indent = { enable = true },
+  incremental_selection = {
+    enable = true,
+    keymaps = {
+      init_selection = "<c-space>",
+      node_incremental = "<c-space>",
+      scope_incremental = "<c-s>",
+      node_decremental = "<c-backspace>",
+    },
+  },
+  textobjects = {
+    select = {
+      enable = true,
+      lookahead = true, -- Automatically jump forward to textobj, similar to targets.vim
+      keymaps = {
+        -- You can use the capture groups defined in textobjects.scm
+        ["aa"] = "@parameter.outer",
+        ["ia"] = "@parameter.inner",
+        ["af"] = "@function.outer",
+        ["if"] = "@function.inner",
+        ["ac"] = "@class.outer",
+        ["ic"] = "@class.inner",
+        ["il"] = "@loop.inner",
+        ["al"] = "@loop.outer",
+      },
+    },
+    move = {
+      enable = true,
+      set_jumps = true, -- whether to set jumps in the jumplist
+      goto_next_start = {
+        ["]m"] = "@function.outer",
+        ["]]"] = "@class.outer",
+      },
+      goto_next_end = {
+        ["]M"] = "@function.outer",
+        ["]["] = "@class.outer",
+      },
+      goto_previous_start = {
+        ["[m"] = "@function.outer",
+        ["[["] = "@class.outer",
+      },
+      goto_previous_end = {
+        ["[M"] = "@function.outer",
+        ["[]"] = "@class.outer",
+      },
+    },
+    swap = {
+      enable = true,
+      swap_next = {
+        ["<leader>a"] = "@parameter.inner",
+      },
+      swap_previous = {
+        ["<leader>A"] = "@parameter.inner",
+      },
+    },
+  },
+})
 ----------------------
 -- Treesitter
 ------------------------
@@ -98,6 +98,14 @@ vim.g.neovide_transparency = 0.7
 ------------------------
 lvim.colorscheme = "cyberdream"
 lvim.plugins = {
+-- {
+-- 'mvllow/modes.nvim',
+-- tag = 'v0.2.0',
+-- config = function()
+--   require('modes').setup()
+-- end
+-- },
+{ 'rasulomaroff/reactive.nvim' },
 	"olexsmir/gopher.nvim",
 	"leoluz/nvim-dap-go",
 	"github/copilot.vim",
@@ -202,9 +210,75 @@ lvim.plugins = {
       require("inc_rename").setup()
     end,
   },
+  {
+    "nvim-treesitter/nvim-treesitter-textobjects",
+    after = "nvim-treesitter",
+    dependencies = { "nvim-treesitter/nvim-treesitter" },
+  },
+  {
+    "phaazon/hop.nvim",
+    event = "BufRead",
+    config = function()
+      require("hop").setup()
+      vim.api.nvim_set_keymap("n", "s", ":HopChar2<cr>", { silent = true })
+      vim.api.nvim_set_keymap("n", "S", ":HopWord<cr>", { silent = true })
+    end,
+  },
+  { "igorgue/danger" },
 }
-
+require('reactive').setup {
+  builtin = {
+    cursorline = true,
+    cursor = true,
+    modemsg = true
+  }
+}
+lvim.builtin.which_key.mappings["r"] = {
+  name = "inc_rename",
+  n = { ":IncRename ", "Rename symbol under cursor" },
+  p = { "<cmd>FloatermNew --autoclose=0 python %<cr>", "Run python file in terminal" },
+  P = { '<cmd>TermExec go_back=0 cmd="p %"<cr>', "Run python file in terminal" },
+  c = { "<cmd>FloatermNew --autoclose=0 g++ % -o %< && ./%<<cr>", "Run C file in terminal" },
+  C = { '<cmd>TermExec go_back=0 cmd="g++ % -o % && ./%"<cr>', "Run C file in terminal" },
+  -- n = {
+  --
+  --   function()
+  --     return ":IncRename " .. vim.fn.expand("<cword>")
+  --   end, { expr = true },
+  --   "Rename symbol under cursor" },
+}
+lvim.builtin.which_key.mappings["f"] = {
+  name = "Folding",
+  c = { "<cmd>foldclose<cr>", "Close all folds" },
+  o = { "<cmd>foldopen<cr>", "Open all folds" },
+  t = { "<cmd>foldtext<cr>", "Toggle fold text" },
+  r = { "<cmd>foldreset<cr>", "Reset folds" },
+  R = { "<cmd>foldremove<cr>", "Remove folds" },
+  z = { "<cmd>set foldlevel=20<cr>", "Set fold level" },
+}
+lvim.builtin.which_key.mappings["H"] = {
+  name = "Harpoon marks",
+  { "<cmd>lua require('harpoon.ui').toggle_quick_menu()<cr>", "Toggle quick menu" },
+}
+lvim.builtin.which_key.mappings["h"] = {
+  name = "Harpoon",
+  a = { "<cmd>lua require('harpoon.mark').add_file()<cr>", "Add file" },
+  d = { "<cmd>lua require('harpoon.ui').toggle_quick_menu()<cr>", "Toggle quick menu" },
+  t = { "<cmd>Telescope harpoon marks<cr>", "Telescope view" },
+  h = { "<cmd>lua require('harpoon.ui').nav_next()<cr>", "Go to left file" },
+  l = { "<cmd>lua require('harpoon.ui').nav_prev()<cr>", "Go to right file" },
+}
+lvim.builtin.which_key.mappings["P"] = { "<cmd>Telescope projects<CR>", "Projects" }
 ------------------------
+lvim.builtin.which_key.mappings["t"] = {
+  name = "+Trouble",
+  r = { "<cmd>Trouble lsp_references<cr>", "References" },
+  f = { "<cmd>Trouble lsp_definitions<cr>", "Definitions" },
+  d = { "<cmd>Trouble document_diagnostics<cr>", "Diagnostics" },
+  q = { "<cmd>Trouble quickfix<cr>", "QuickFix" },
+  l = { "<cmd>Trouble loclist<cr>", "LocationList" },
+  w = { "<cmd>Trouble workspace_diagnostics<cr>", "Workspace Diagnostics" },
+}
 -- Formatting
 ------------------------
 local formatters = require("lvim.lsp.null-ls.formatters")
@@ -366,4 +440,5 @@ lvim.keys.normal_mode["<C-s>"] = ":w<cr>"
 -- 	end,
 -- })
 
-lvim.builtin.lualine.options.theme = "tokyonight"
+lvim.builtin.lualine.options.theme = "cyberdream"
+-- lvim.builtin.lualine.style = "evilline"
