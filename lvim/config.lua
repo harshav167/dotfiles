@@ -112,6 +112,7 @@ vim.g.neovide_transparency = 0.7
 ------------------------
 lvim.colorscheme = "cyberdream"
 lvim.plugins = {
+
   -- {
   -- 'mvllow/modes.nvim',
   -- tag = 'v0.2.0',
@@ -143,6 +144,7 @@ lvim.plugins = {
   "nvim-neotest/neotest-python",
   "lervag/vimtex",
   "nvim-neotest/nvim-nio",
+  "meznaric/key-analyzer.nvim",
   {
     "folke/tokyonight.nvim",
     lazy = false,
@@ -458,3 +460,19 @@ lvim.keys.normal_mode["<C-s>"] = ":w<cr>"
 
 lvim.builtin.lualine.options.theme = "cyberdream"
 -- lvim.builtin.lualine.style = "evilline"
+require("key-analyzer").setup({
+  -- Name of the command to use for the plugin
+  command_name = "KeyAnalyzer", -- or nil to disable the command
+
+  -- Customize the highlight groups
+  highlights = {
+    bracket_used = "KeyAnalyzerBracketUsed",
+    letter_used = "KeyAnalyzerLetterUsed",
+    bracket_unused = "KeyAnalyzerBracketUnused",
+    letter_unused = "KeyAnalyzerLetterUnused",
+    promo_highlight = "KeyAnalyzerPromo",
+
+    -- Set to false if you want to define highlights manually
+    define_default_highlights = true,
+  },
+})
