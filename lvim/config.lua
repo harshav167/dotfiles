@@ -120,7 +120,32 @@ lvim.plugins = {
   --   require('modes').setup()
   -- end
   -- },
+  "sphamba/smear-cursor.nvim",
   { 'rasulomaroff/reactive.nvim' },
+  {
+    "karb94/neoscroll.nvim",
+    config = function()
+      require('neoscroll').setup({
+        -- mappings = { -- Keys to be mapped to their corresponding default scrolling animation
+        --   '<C-u>', '<C-d>',
+        --   '<C-b>', '<C-f>',
+        --   '<C-y>', '<C-e>',
+        --   'zt', 'zz', 'zb',
+        -- },
+        -- hide_cursor = true,          -- Hide cursor while scrolling
+        -- stop_eof = true,             -- Stop at <EOF> when scrolling downwards
+        -- respect_scrolloff = false,   -- Stop scrolling when the cursor reaches the scrolloff margin of the file
+        -- cursor_scrolls_alone = true, -- The cursor will keep on scrolling even if the window cannot scroll further
+        -- easing = 'linear',           -- Default easing function
+        -- pre_hook = nil,              -- Function to run before the scrolling animation starts
+        -- post_hook = nil,             -- Function to run after the scrolling animation ends
+        -- performance_mode = false,    -- Disable "Performance Mode" on all buffers.
+        -- ignored_events = {           -- Events ignored while scrolling
+        --   'WinScrolled', 'CursorMoved'
+        -- },
+      })
+    end
+  },
   "olexsmir/gopher.nvim",
   "leoluz/nvim-dap-go",
   "github/copilot.vim",
@@ -200,16 +225,18 @@ lvim.plugins = {
     event = "WinScrolled",
     config = function()
       require("neoscroll").setup({
-        -- All these keys will be mapped to their corresponding default scrolling animation
-        mappings = { "<C-u>", "<C-d>", "<C-b>", "<C-f>", "<C-y>", "<C-e>", "zt", "zz", "zb" },
-        hide_cursor = true,          -- Hide cursor while scrolling
-        stop_eof = true,             -- Stop at <EOF> when scrolling downwards
-        use_local_scrolloff = false, -- Use the local scope of scrolloff instead of the global scope
-        respect_scrolloff = false,   -- Stop scrolling when the cursor reaches the scrolloff margin of the file
-        cursor_scrolls_alone = true, -- The cursor will keep on scrolling even if the window cannot scroll further
-        easing_function = nil,       -- Default easing function
-        pre_hook = nil,              -- Function to run before the scrolling animation starts
-        post_hook = nil,             -- Function to run after the scrolling animation ends
+        --     -- All these keys will be mapped to their corresponding default scrolling animation
+        --     mappings = { "<C-u>", "<C-d>", "<C-b>", "<C-f>", "<C-y>", "<C-e>", "zt", "zz", "zb" },
+        --     hide_cursor = true,          -- Hide cursor while scrolling
+        --     stop_eof = true,             -- Stop at <EOF> when scrolling downwards
+        --     use_local_scrolloff = false, -- Use the local scope of scrolloff instead of the global scope
+        --     respect_scrolloff = false,   -- Stop scrolling when the cursor reaches the scrolloff margin of the file
+        --     cursor_scrolls_alone = true, -- The cursor will keep on scrolling even if the window cannot scroll further
+        --     easing_function = nil,       -- Default easing function
+        --     pre_hook = nil,              -- Function to run before the scrolling animation starts
+        --     post_hook = nil,             -- Function to run after the scrolling animation ends
+        --   })
+        -- end,
       })
     end,
   },
@@ -474,5 +501,39 @@ require("key-analyzer").setup({
 
     -- Set to false if you want to define highlights manually
     define_default_highlights = true,
+  },
+})
+
+-- LSP servers to automatically install
+require("mason-lspconfig").setup({
+  ensure_installed = {
+    "autotools_ls",
+    "bashls",
+    "cssls",
+    "dockerls",
+    "eslint",
+    "golangci_lint_ls",
+    "gopls",
+    "helm_ls",
+    "html",
+    "intelephense",
+    "jdtls",
+    "jsonls",
+    "lua_ls",
+    "nil_ls",
+    "prismals",
+    "pyright",
+    "r_language_server",
+    "rnix",
+    "ruff_lsp",
+    "rust_analyzer",
+    "sqls",
+    "tailwindcss",
+    "terraformls",
+    "texlab",
+    "tsserver",
+    "vale_ls",
+    "vimls",
+    "yamlls",
   },
 })
