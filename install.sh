@@ -195,10 +195,65 @@ fi
 # Setup Python dependencies for LunarVim
 setup_python_deps() {
     echo "Installing Python dependencies for LunarVim globally..."
+    # Check if we're in a Debian-based system with externally managed Python
     if command -v apt-get &>/dev/null; then
-        sudo apt-get install -y python3-pip
+        # First, ensure essential Python packages are installed
+        sudo apt-get install -y python3-dev python3-pip || true
+
+        # Check Python version
+        PYTHON_VERSION=$(python3 --version 2>&1 | grep -oP 'Python \K[0-9]+\.[0-9]+')
+        echo "Detected Python version: $PYTHON_VERSION"
+
+        # Create Python virtual environment
+        echo "Setting up Python virtual environment for LunarVim..."
+
+        # Try to install the venv package appropriate for the system
+        # First check if specific Python version venv exists (e.g., python3.11-venv for Debian Bookworm)
+        SPECIFIC_VENV="python3.$(echo $PYTHON_VERSION | cut -d'.' -f2)-venv"
+        if apt-cache search --names-only "$SPECIFIC_VENV" | grep -q "$SPECIFIC_VENV"; then
+            echo "Installing $SPECIFIC_VENV package..."
+            sudo apt-get install -y "$SPECIFIC_VENV"
+        else
+            # Fall back to generic python3-venv package
+            echo "Specific venv package not found, installing python3-venv..."
+            sudo apt-get install -y python3-venv || sudo apt-get install -y python3-virtualenv || true
+        fi
+
+        # Create virtual environment
+        echo "Creating Python virtual environment at ~/.local/lvim-env"
+        if ! python3 -m venv ~/.local/lvim-env 2>/dev/null; then
+            echo "Failed to create virtual environment with venv module"
+            if command -v virtualenv &>/dev/null; then
+                echo "Trying virtualenv instead..."
+                virtualenv ~/.local/lvim-env
+            else
+                echo "Unable to create virtual environment, falling back to system packages"
+                # As a last resort, use the --break-system-packages flag
+                pip3 install --break-system-packages pynvim
+                return
+            fi
+        fi
+
+        # Install pynvim in the virtual environment
+        echo "Installing pynvim in virtual environment"
+        ~/.local/lvim-env/bin/pip install pynvim
+
+        # Create a wrapper script to use the virtual env Python
+        mkdir -p ~/.local/bin
+        cat >~/.local/bin/lvim-python <<'EOF'
+#!/bin/sh
+exec "$HOME/.local/lvim-env/bin/python" "$@"
+EOF
+        chmod +x ~/.local/bin/lvim-python
+
+        # Export this variable so LunarVim can find the Python with pynvim
+        export LVIM_PYTHON_PATH="$HOME/.local/bin/lvim-python"
+        echo "Python virtual environment set up with pynvim at $LVIM_PYTHON_PATH"
+    else
+        # Not a Debian system, try standard pip install
+        echo "Non-Debian system detected, installing pynvim via pip"
+        pip3 install --user pynvim || pip3 install pynvim
     fi
-    python3 -m pip install --user --break-system-packages pynvim
 }
 
 # Setup Node.js with nvm for LunarVim
@@ -292,29 +347,51 @@ fix_lunarvim_compatibility() {
 }
 
 # Install LunarVim if not already installed
-if ! command -v lvim &>/dev/null; then
-    echo "Installing LunarVim..."
-    # Setup dependencies first
-    setup_python_deps
-    setup_nodejs
-    setup_rust
+install_lunarvim() {
+    if ! command -v lvim &>/dev/null; then
+        echo "Installing LunarVim..."
+        # Setup dependencies first
+        setup_python_deps
+        setup_nodejs
+        setup_rust
 
-    # Install LunarVim with the specified branch (using yes to auto-confirm prompts)
-    # Using the latest release branch 1.4 for neovim 0.9
-    yes | LV_BRANCH='release-1.4/neovim-0.9' bash <(curl -s https://raw.githubusercontent.com/LunarVim/LunarVim/release-1.4/neovim-0.9/utils/installer/install.sh)
+        # After installing other dependencies, clone and run LunarVim installer
+        if [ ! -d "$HOME/.local/share/lunarvim" ]; then
+            echo "Installing LunarVim..."
 
-    # Fix compatibility issues after installation
-    fix_lunarvim_compatibility
-else
-    echo "LunarVim already installed, checking dependencies..."
-    # Still ensure dependencies are set up
-    setup_python_deps
-    setup_nodejs
-    setup_rust
+            # Set environment variable for installer
+            export LV_BRANCH='release-1.4/neovim-0.9'
 
-    # Fix compatibility issues with existing installation
-    fix_lunarvim_compatibility
-fi
+            # Handle different Python installation methods
+            if [ -n "$LVIM_PYTHON_PATH" ]; then
+                export LUNARVIM_PYTHON_PATH="$LVIM_PYTHON_PATH"
+                echo "Using Python from virtual environment: $LUNARVIM_PYTHON_PATH"
+            fi
+
+            # Check if we should skip dependency installations
+            INSTALL_DEPS_FLAG=""
+            if [ -n "$LVIM_PYTHON_PATH" ] || pip3 --version 2>&1 | grep -q "externally-managed-environment"; then
+                INSTALL_DEPS_FLAG="--no-install-dependencies"
+                echo "Skipping LunarVim dependency installation since Python is already configured"
+            fi
+
+            # Create a temporary installer script with modifications
+            TEMP_INSTALLER="/tmp/lvim_installer_$$.sh"
+            curl -s https://raw.githubusercontent.com/LunarVim/LunarVim/release-1.4/neovim-0.9/utils/installer/install.sh >"$TEMP_INSTALLER"
+
+            # Run the installer with our configuration
+            bash "$TEMP_INSTALLER" $INSTALL_DEPS_FLAG
+
+            # Remove the temporary installer
+            rm -f "$TEMP_INSTALLER"
+        fi
+
+        # Fix compatibility issues after installation
+        fix_lunarvim_compatibility
+    else
+        echo "LunarVim is already installed"
+    fi
+}
 
 # Create config directories
 echo "Setting up config directories..."
