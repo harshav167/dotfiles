@@ -46,39 +46,24 @@ fi
 echo "Installing packages with Homebrew..."
 brew install neovim ripgrep git lazygit lazydocker tmux fd
 
-# Setup Python environment for LunarVim
-setup_python_env() {
-    echo "Setting up Python virtual environment for LunarVim..."
-    mkdir -p ~/.local/venvs
-    python3 -m venv ~/.local/venvs/lunarvim
-    source ~/.local/venvs/lunarvim/bin/activate
-    pip install pynvim
-    deactivate
-
-    # Add venv activation to path or alias
-    if ! grep -q "lunarvim-python" ~/.zshrc; then
-        echo 'alias lunarvim-python="source ~/.local/venvs/lunarvim/bin/activate"' >>~/.zshrc
-        echo 'export LUNARVIM_PYTHON_PATH=~/.local/venvs/lunarvim/bin/python' >>~/.zshrc
-    fi
+# Setup Python dependencies for LunarVim
+setup_python_deps() {
+    echo "Installing Python dependencies for LunarVim globally..."
+    python3 -m pip install --user --break-system-packages pynvim
 }
 
 # Install LunarVim if not already installed
 if ! command -v lvim &>/dev/null; then
     echo "Installing LunarVim..."
-    # Setup Python virtual environment first
-    setup_python_env
-
-    # Set environment variable to use our Python venv
-    export LUNARVIM_PYTHON_PATH=~/.local/venvs/lunarvim/bin/python
+    # Setup Python dependencies first
+    setup_python_deps
 
     # Install LunarVim with the specified branch
     LV_BRANCH='release-1.3/neovim-0.9' bash <(curl -s https://raw.githubusercontent.com/LunarVim/LunarVim/release-1.3/neovim-0.9/utils/installer/install.sh)
 else
     echo "LunarVim already installed, skipping installation."
-    # Still ensure Python environment is set up
-    if [ ! -d ~/.local/venvs/lunarvim ]; then
-        setup_python_env
-    fi
+    # Still ensure Python dependencies are set up
+    setup_python_deps
 fi
 
 # Create config directories
