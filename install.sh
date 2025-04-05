@@ -359,8 +359,12 @@ install_lunarvim() {
         if [ ! -d "$HOME/.local/share/lunarvim" ]; then
             echo "Installing LunarVim..."
 
-            # Set environment variable for installer
-            export LV_BRANCH='release-1.4/neovim-0.9'
+            # Create nvim config directory if it doesn't exist
+            mkdir -p ~/.config/nvim
+
+            # Set environment variable for installer - use an older version that's more stable
+            export LV_BRANCH='release-1.3/neovim-0.9'
+            echo "Using LunarVim branch: $LV_BRANCH"
 
             # Handle different Python installation methods
             if [ -n "$LVIM_PYTHON_PATH" ]; then
@@ -368,22 +372,41 @@ install_lunarvim() {
                 echo "Using Python from virtual environment: $LUNARVIM_PYTHON_PATH"
             fi
 
+            # For Debian-based systems, we need to ensure we have a PYTHON_PATH set
+            if command -v apt-get &>/dev/null && [ -f "$HOME/.local/bin/lvim-python" ]; then
+                if [ -z "$LUNARVIM_PYTHON_PATH" ]; then
+                    export LUNARVIM_PYTHON_PATH="$HOME/.local/bin/lvim-python"
+                    echo "Setting LUNARVIM_PYTHON_PATH to $LUNARVIM_PYTHON_PATH for Debian"
+                fi
+            fi
+
             # Check if we should skip dependency installations
             INSTALL_DEPS_FLAG=""
-            if [ -n "$LVIM_PYTHON_PATH" ] || pip3 --version 2>&1 | grep -q "externally-managed-environment"; then
+            if [ -n "$LUNARVIM_PYTHON_PATH" ]; then
                 INSTALL_DEPS_FLAG="--no-install-dependencies"
                 echo "Skipping LunarVim dependency installation since Python is already configured"
             fi
 
-            # Create a temporary installer script with modifications
-            TEMP_INSTALLER="/tmp/lvim_installer_$$.sh"
-            curl -s https://raw.githubusercontent.com/LunarVim/LunarVim/release-1.4/neovim-0.9/utils/installer/install.sh >"$TEMP_INSTALLER"
+            # Create a directory for the installer
+            mkdir -p /tmp/lvim_installer
+            cd /tmp/lvim_installer
 
-            # Run the installer with our configuration
-            bash "$TEMP_INSTALLER" $INSTALL_DEPS_FLAG
+            # Download the installer script
+            echo "Downloading LunarVim installer..."
+            curl -s https://raw.githubusercontent.com/LunarVim/LunarVim/release-1.3/neovim-0.9/utils/installer/install.sh >install.sh
 
-            # Remove the temporary installer
-            rm -f "$TEMP_INSTALLER"
+            # Make the installer executable
+            chmod +x install.sh
+
+            # Run the installer with appropriate flags
+            echo "Running LunarVim installer with flags: $INSTALL_DEPS_FLAG"
+            ./install.sh $INSTALL_DEPS_FLAG
+
+            # Cleanup
+            cd -
+            rm -rf /tmp/lvim_installer
+
+            echo "LunarVim installation completed"
         fi
 
         # Fix compatibility issues after installation
