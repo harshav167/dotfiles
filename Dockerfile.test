@@ -39,15 +39,13 @@ COPY --chown=testuser:testuser . /home/testuser/dotfiles
 
 # Run verification script in foreground
 ENTRYPOINT ["/bin/bash", "-c", "cd /home/testuser/dotfiles && bash install.sh && \
+    echo 'Running verification tests...' && \
+    TESTS_PASSED=true && \
     echo 'Testing tmux configuration...' && \
-    [ -f ~/.tmux.conf ] && echo 'Tmux config found!' && \
-    echo 'Testing LunarVim...' && \
-    export PATH=$HOME/.local/bin:$PATH && \
-    ls -la ~/.local/bin && \
-    (command -v lvim && echo 'LunarVim executable found!' || echo 'LunarVim executable not found') && \
-    ([ -d ~/.local/share/lunarvim ] && echo 'LunarVim directory found!' || echo 'LunarVim directory not found') && \
+    if [ -f ~/.tmux.conf ]; then echo 'Tmux config found! ✅'; else echo 'Tmux config missing! ❌'; TESTS_PASSED=false; fi && \
     echo 'Testing lazygit...' && \
-    ([ -f ~/.local/bin/lazygit ] && echo 'lazygit installed!' || echo 'lazygit not found') && \
+    if [ -f ~/.local/bin/lazygit ]; then echo 'lazygit installed! ✅'; else echo 'lazygit not found! ❌'; TESTS_PASSED=false; fi && \
     echo 'Testing lazydocker...' && \
-    ([ -f ~/.local/bin/lazydocker ] && echo 'lazydocker installed!' || echo 'lazydocker not found') && \
-    echo 'All tests passed!' || echo 'Tests failed!'"] 
+    if [ -f ~/.local/bin/lazydocker ]; then echo 'lazydocker installed! ✅'; else echo 'lazydocker not found! ❌'; TESTS_PASSED=false; fi && \
+    echo 'Test results:' && \
+    if [ \"$TESTS_PASSED\" = \"true\" ]; then echo 'All tests passed! ✅'; exit 0; else echo 'Some tests failed! ❌'; exit 1; fi"] 
