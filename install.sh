@@ -83,12 +83,34 @@ setup_nodejs() {
     npm install -g neovim
 }
 
+# Setup Rust and Cargo with rustup
+setup_rust() {
+    echo "Setting up Rust and Cargo with rustup..."
+
+    if ! command -v rustc &>/dev/null; then
+        echo "Installing Rust via rustup..."
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+
+        # Source cargo environment for this script
+        source "$HOME/.cargo/env"
+    else
+        echo "Rust already installed, updating..."
+        source "$HOME/.cargo/env"
+        rustup update
+    fi
+
+    # Verify installation
+    echo "Rust version: $(rustc --version)"
+    echo "Cargo version: $(cargo --version)"
+}
+
 # Install LunarVim if not already installed
 if ! command -v lvim &>/dev/null; then
     echo "Installing LunarVim..."
     # Setup dependencies first
     setup_python_deps
     setup_nodejs
+    setup_rust
 
     # Install LunarVim with the specified branch
     LV_BRANCH='release-1.3/neovim-0.9' bash <(curl -s https://raw.githubusercontent.com/LunarVim/LunarVim/release-1.3/neovim-0.9/utils/installer/install.sh)
@@ -97,6 +119,7 @@ else
     # Still ensure dependencies are set up
     setup_python_deps
     setup_nodejs
+    setup_rust
 fi
 
 # Create config directories
@@ -123,6 +146,8 @@ export PATH=\$HOME/.local/bin:\$PATH
 [ -f /usr/bin/fdfind ] && alias fd=fdfind
 # Add LunarVim to path
 export PATH=\$HOME/.local/bin:\$PATH
+# Add Cargo to path
+[ -f \$HOME/.cargo/env ] && source \$HOME/.cargo/env
 EOT
 else
     echo "Shell already configured, skipping."
