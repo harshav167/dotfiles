@@ -11,6 +11,8 @@ RUN apt-get update && apt-get install -y \
     sudo \
     python3 \
     python3-pip \
+    python3-venv \
+    python3-pynvim \
     nodejs \
     npm \
     zsh \
@@ -35,9 +37,6 @@ RUN useradd -m -s /bin/zsh -G sudo testuser && \
 
 # Install rust/cargo
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-
-# Install pynvim
-RUN pip3 install pynvim
 
 # Install neovim npm package
 RUN npm install -g neovim
