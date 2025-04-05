@@ -1,0 +1,22 @@
+# Chezmoi configuration file
+# See https://www.chezmoi.io/reference/configuration-file/ for more details
+
+[data]
+    name = "{{ promptString "name" }}"
+    email = "{{ promptString "email" }}"
+    
+    # Platform detection
+    [data.platform]
+        isMacOS = {{ eq .chezmoi.os "darwin" }}
+        isLinux = {{ eq .chezmoi.os "linux" }}
+
+[edit]
+    command = "lvim"
+
+[diff]
+    command = "lvim"
+    args = ["-d", "{{ .Destination }}", "{{ .Target }}"]
+
+[merge]
+    command = "lvim"
+    args = ["-d", "{{ .Destination }}", "{{ .Source }}", "{{ .Target }}"] 

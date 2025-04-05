@@ -1,0 +1,15 @@
+[".config/lvim"]
+    type = "archive"
+    url = "https://github.com/harshav167/dotfiles/archive/main.tar.gz"
+    stripComponents = 2
+    include = ["*/lvim/**"]
+    exact = true
+    refreshPeriod = "168h"
+
+[".tmux"]
+    type = "archive"
+    url = "https://github.com/harshav167/dotfiles/archive/main.tar.gz"
+    stripComponents = 2
+    include = ["*/tmux/**"]
+    exact = true
+    refreshPeriod = "168h" 

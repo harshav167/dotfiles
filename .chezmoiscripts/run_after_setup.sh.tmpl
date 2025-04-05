@@ -1,0 +1,119 @@
+#!/bin/bash
+
+set -e  # Exit on error
+
+echo "==== Running post-application setup ===="
+
+# Ensure .local/bin exists and is in PATH
+mkdir -p $HOME/.local/bin
+export PATH="$HOME/.local/bin:$PATH"
+
+# Setup path for different shells
+{{- if eq .chezmoi.os "darwin" }}
+# macOS typically uses zsh
+if grep -q "PATH=\"\$HOME/.local/bin:\$PATH\"" "$HOME/.zshrc"; then
+    echo "PATH already set in .zshrc"
+else
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> $HOME/.zshrc
+fi
+
+# Configure NVM in zsh if not already done
+if ! grep -q "NVM_DIR" "$HOME/.zshrc"; then
+    echo 'export NVM_DIR="$HOME/.nvm"' >> $HOME/.zshrc
+    echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm' >> $HOME/.zshrc
+    echo '[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion' >> $HOME/.zshrc
+fi
+
+# Configure Rust in zsh if not already done
+if [ -f "$HOME/.cargo/env" ] && ! grep -q "\.cargo/env" "$HOME/.zshrc"; then
+    echo 'source "$HOME/.cargo/env"' >> $HOME/.zshrc
+fi
+{{- else }}
+# Linux typically uses bash
+if grep -q "PATH=\"\$HOME/.local/bin:\$PATH\"" "$HOME/.bashrc"; then
+    echo "PATH already set in .bashrc"
+else
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> $HOME/.bashrc
+fi
+
+# Configure NVM in bash if not already done
+if ! grep -q "NVM_DIR" "$HOME/.bashrc"; then
+    echo 'export NVM_DIR="$HOME/.nvm"' >> $HOME/.bashrc
+    echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm' >> $HOME/.bashrc
+    echo '[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion' >> $HOME/.bashrc
+fi
+
+# Configure Rust in bash if not already done
+if [ -f "$HOME/.cargo/env" ] && ! grep -q "\.cargo/env" "$HOME/.bashrc"; then
+    echo 'source "$HOME/.cargo/env"' >> $HOME/.bashrc
+fi
+{{- end }}
+
+# Set up tmux plugin manager if not already installed
+if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
+    echo "Installing tmux plugin manager..."
+    mkdir -p $HOME/.tmux/plugins
+    git clone https://github.com/tmux-plugins/tpm $HOME/.tmux/plugins/tpm
+fi
+
+# Check if LunarVim is properly installed
+if command -v lvim &> /dev/null; then
+    echo "LunarVim is properly installed"
+else
+    echo "WARNING: LunarVim is not on your PATH. You might need to add ~/.local/bin to your PATH."
+fi
+
+# Check dependencies
+echo "Checking installed dependencies..."
+
+# Check Rust/Cargo
+if command -v rustc &> /dev/null && command -v cargo &> /dev/null; then
+    echo "✓ Rust and Cargo are installed"
+else
+    echo "✗ Rust or Cargo is missing. Install with: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
+fi
+
+# Check Node.js/npm
+if command -v node &> /dev/null && command -v npm &> /dev/null; then
+    echo "✓ Node.js and npm are installed"
+    if npm list -g neovim &> /dev/null; then
+        echo "✓ neovim npm package is installed"
+    else
+        echo "✗ neovim npm package is missing. Install with: npm install -g neovim"
+    fi
+else
+    echo "✗ Node.js or npm is missing. Install NVM and Node.js."
+fi
+
+# Check Python/pynvim
+if command -v python3 &> /dev/null; then
+    echo "✓ Python 3 is installed"
+    if python3 -c "import pynvim" &> /dev/null; then
+        echo "✓ pynvim Python package is installed"
+    else
+        echo "✗ pynvim Python package is missing. Install with: pip3 install pynvim"
+    fi
+else
+    echo "✗ Python 3 is missing. Install Python 3."
+fi
+
+# Check if Homebrew packages are installed
+echo "Checking Homebrew packages..."
+for pkg in lazygit lazydocker tmux neovim ripgrep fd; do
+    if command -v $pkg &> /dev/null; then
+        echo "✓ $pkg is installed"
+    else
+        echo "✗ $pkg is not installed or not on your PATH."
+    fi
+done
+
+echo "==== Post-application setup complete! ===="
+echo ""
+echo "Your dotfiles have been set up successfully!"
+echo "You might need to restart your terminal or source your shell configuration file."
+echo ""
+echo "To manage your dotfiles in the future, use:"
+echo "  chezmoi edit ~/.config/lvim/config.lua  # Edit LunarVim config"
+echo "  chezmoi edit ~/.tmux.conf               # Edit tmux config"
+echo "  chezmoi apply                           # Apply changes"
+echo "  chezmoi update                          # Pull and apply latest changes from repo" 

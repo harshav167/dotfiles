@@ -1,0 +1,18 @@
+# Files to be ignored by chezmoi
+README.md
+.git
+.gitattributes
+.DS_Store
+.chezmoiroot
+.chezmoiignore
+.chezmoiexternal.toml
+.chezmoiremove
+.vscode
+install.sh
+chezmoi-setup.sh
+setup.sh
+tmux.zip
+code.css
+script.js
+private_dot_config
+dot_tmux
