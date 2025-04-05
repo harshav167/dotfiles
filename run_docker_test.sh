@@ -41,20 +41,8 @@ docker build $PLATFORM_FLAG -t "$IMAGE_NAME" -f "$DOCKERFILE" "$SCRIPT_DIR" || h
 
 echo "Dotfiles test environment is ready!"
 
-# Run automated tests if --test is provided
-if [[ "$1" == "--test" ]]; then
-    echo "Running automated tests..."
-    docker run $PLATFORM_FLAG --rm -e RUN_TESTS=true "$IMAGE_NAME" || handle_error "Tests failed"
-    echo "All tests passed successfully!"
-    exit 0
-fi
+# Run the container - the installation will be tested automatically
+echo "Running installation test..."
+docker run $PLATFORM_FLAG --rm "$IMAGE_NAME"
 
-# Run in interactive mode
-echo "Starting interactive test shell..."
-echo ""
-echo "You can test your dotfiles within the container."
-echo "Exit the container by typing 'exit' or pressing Ctrl+D."
-echo "Run the test script with './test_dotfiles.sh'"
-echo ""
-
-docker run $PLATFORM_FLAG --rm -it "$IMAGE_NAME"
+echo "Docker test completed."

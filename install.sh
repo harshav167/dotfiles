@@ -5,10 +5,10 @@ set -e
 
 echo "==== Starting dotfiles installation ===="
 
-# Install Homebrew (idempotent)
+# Install Homebrew (idempotent and non-interactive)
 if ! command -v brew &>/dev/null; then
     echo "Installing Homebrew..."
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 else
     echo "Homebrew already installed, skipping installation."
 fi
@@ -24,27 +24,30 @@ else
     # Install build dependencies for Linux if needed
     if command -v apt-get &>/dev/null && ! dpkg -l build-essential &>/dev/null; then
         echo "Installing build essentials for Linux..."
-        sudo apt-get update
+        sudo apt-get update -y
         sudo apt-get install -y build-essential
     fi
 fi
 
 # Add Homebrew to shell profile if not already added
 if [[ $(uname) == "Darwin" ]]; then
-    if ! grep -q "brew shellenv" ~/.zshrc; then
+    if ! grep -q "brew shellenv" ~/.zshrc 2>/dev/null; then
         echo "Adding Homebrew to PATH in ~/.zshrc..."
+        mkdir -p ~/.zshrc.d
         echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >>~/.zshrc
     fi
 else
-    if ! grep -q "brew shellenv" ~/.zshrc && [ -d "/home/linuxbrew/.linuxbrew" ]; then
+    if ! grep -q "brew shellenv" ~/.zshrc 2>/dev/null && [ -d "/home/linuxbrew/.linuxbrew" ]; then
         echo "Adding Homebrew to PATH in ~/.zshrc..."
+        mkdir -p ~/.zshrc.d
         echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >>~/.zshrc
     fi
 fi
 
-# Install packages (brew handles idempotence)
+# Install packages (brew handles idempotence) - we add the --no-quarantine flag to avoid macOS security prompts
 echo "Installing packages with Homebrew..."
-brew install neovim ripgrep git lazygit lazydocker tmux fd
+export HOMEBREW_NO_AUTO_UPDATE=1
+brew install --no-quarantine neovim ripgrep git lazygit lazydocker tmux fd
 
 # Setup Python dependencies for LunarVim
 setup_python_deps() {
@@ -62,6 +65,7 @@ setup_nodejs() {
     # Install nvm if not already installed
     if [ ! -d "$HOME/.nvm" ]; then
         echo "Installing nvm..."
+        export PROFILE=/dev/null # Avoid modifying profile during installation
         curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
 
         # Load nvm immediately for this script
@@ -73,17 +77,16 @@ setup_nodejs() {
         [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
     fi
 
-    # Install latest Node.js if not already installed
-    if ! command -v node &>/dev/null || [ "$(node -v)" != "$(nvm version-remote --lts)" ]; then
+    # Install latest Node.js if not already installed (non-interactively)
+    if ! command -v node &>/dev/null; then
         echo "Installing latest LTS Node.js..."
-        nvm install --lts
-        nvm use --lts
+        nvm install --lts --no-progress
         nvm alias default node
     fi
 
     # Install neovim npm package
     echo "Installing neovim npm package..."
-    npm install -g neovim
+    npm install -g neovim --silent
 }
 
 # Setup Rust and Cargo with rustup
@@ -92,7 +95,8 @@ setup_rust() {
 
     if ! command -v rustc &>/dev/null; then
         echo "Installing Rust via rustup..."
-        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        # Use -y flag for non-interactive installation and disable modifying the PATH
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path
 
         # Source cargo environment for this script
         source "$HOME/.cargo/env"
@@ -152,8 +156,9 @@ if ! command -v lvim &>/dev/null; then
     setup_nodejs
     setup_rust
 
-    # Install LunarVim with the specified branch
-    LV_BRANCH='release-1.3/neovim-0.9' bash <(curl -s https://raw.githubusercontent.com/LunarVim/LunarVim/release-1.3/neovim-0.9/utils/installer/install.sh)
+    # Install LunarVim with the specified branch (using yes to auto-confirm prompts)
+    # Using the latest release branch 1.4 for neovim 0.9
+    yes | LV_BRANCH='release-1.4/neovim-0.9' bash <(curl -s https://raw.githubusercontent.com/LunarVim/LunarVim/release-1.4/neovim-0.9/utils/installer/install.sh)
 
     # Fix compatibility issues after installation
     fix_lunarvim_compatibility
@@ -175,14 +180,29 @@ mkdir -p ~/.tmux
 
 # Copy configurations (possibly overwrite existing ones to ensure latest version)
 echo "Copying configurations..."
-cp -r lvim/* ~/.config/lvim/
-cp -r tmux/* ~/.tmux/
+cp -r lvim/* ~/.config/lvim/ 2>/dev/null || true
+cp -r tmux/* ~/.tmux/ 2>/dev/null || true
+
+# Fix for tmux configuration - ensure the main tmux.conf is in the right location
 if [ -f tmux/tmux.conf ]; then
+    echo "Installing tmux.conf to home directory..."
+    cp tmux/tmux.conf ~/.tmux.conf
+    # Also keep a copy in the ~/.tmux directory
     cp tmux/tmux.conf ~/.tmux/
+elif [ -f ~/.tmux/tmux.conf ]; then
+    # If we have a config in ~/.tmux but not at the root, copy it to the root
+    echo "Linking existing tmux.conf to home directory..."
+    cp ~/.tmux/tmux.conf ~/.tmux.conf
+fi
+
+# Create tmux.conf with a source command if it doesn't exist
+if [ ! -f ~/.tmux.conf ]; then
+    echo "Creating default tmux.conf..."
+    echo "source-file ~/.tmux/tmux.conf" >~/.tmux.conf
 fi
 
 # Set up shell config if not already set up
-if ! grep -q "# Added by dotfiles install" ~/.zshrc; then
+if ! grep -q "# Added by dotfiles install" ~/.zshrc 2>/dev/null; then
     echo "Configuring shell..."
     # Add PATH adjustments
     cat <<EOT >>~/.zshrc
@@ -194,6 +214,10 @@ export PATH=\$HOME/.local/bin:\$PATH
 export PATH=\$HOME/.local/bin:\$PATH
 # Add Cargo to path
 [ -f \$HOME/.cargo/env ] && source \$HOME/.cargo/env
+# Add nvm to environment
+export NVM_DIR="\$HOME/.nvm"
+[ -s "\$NVM_DIR/nvm.sh" ] && \. "\$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "\$NVM_DIR/bash_completion" ] && \. "\$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 EOT
 else
     echo "Shell already configured, skipping."

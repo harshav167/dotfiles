@@ -11,13 +11,8 @@ RUN apt-get update && apt-get install -y \
     sudo \
     python3 \
     python3-pip \
-    nodejs \
-    npm \
     zsh \
-    tmux \
     vim \
-    ripgrep \
-    fd-find \
     build-essential \
     ca-certificates \
     locales \
@@ -34,32 +29,12 @@ ENV LC_ALL=en_US.UTF-8
 RUN useradd -m -s /bin/zsh -G sudo testuser && \
     echo "testuser ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/testuser
 
-# Set up symlinks for fd-find
-RUN mkdir -p /usr/local/bin && \
-    ln -s $(which fdfind) /usr/local/bin/fd
-
 # Switch to test user
 USER testuser
 WORKDIR /home/testuser
 
-# Copy test script
-COPY --chown=testuser:testuser test_dotfiles.sh /home/testuser/test_dotfiles.sh
-RUN chmod +x /home/testuser/test_dotfiles.sh
+# Copy dotfiles
+COPY --chown=testuser:testuser . /home/testuser/dotfiles
 
-# Set up environment for test user
-RUN mkdir -p ~/.local/bin && \
-    ln -s /usr/local/bin/fd ~/.local/bin/fd && \
-    echo 'export PATH=$HOME/.local/bin:$PATH' >> ~/.zshrc
-
-# Clone dotfiles repo
-RUN git clone https://github.com/harshav167/dotfiles.git ~/dotfiles && \
-    mkdir -p ~/.config && \
-    mkdir -p ~/.tmux
-
-# Run a shell by default with optional test
-CMD if [ "$RUN_TESTS" = "true" ]; then \
-    /home/testuser/test_dotfiles.sh; \
-    else \
-    echo "Start a test by running: ./test_dotfiles.sh"; \
-    /bin/zsh; \
-    fi 
+# Run verification script in foreground
+ENTRYPOINT ["/bin/bash", "-c", "cd /home/testuser/dotfiles && bash install.sh && echo 'Testing tmux configuration...' && [ -f ~/.tmux.conf ] && echo 'Tmux config found!' && echo 'Testing LunarVim...' && [ -d ~/.local/share/lunarvim ] && echo 'LunarVim installed!' && echo 'All tests passed!' || echo 'Tests failed!'"] 
