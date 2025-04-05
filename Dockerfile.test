@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     ca-certificates \
     locales \
+    jq \
     && rm -rf /var/lib/apt/lists/*
 
 # Set up locale
@@ -37,4 +38,4 @@ WORKDIR /home/testuser
 COPY --chown=testuser:testuser . /home/testuser/dotfiles
 
 # Run verification script in foreground
-ENTRYPOINT ["/bin/bash", "-c", "cd /home/testuser/dotfiles && bash install.sh && echo 'Testing tmux configuration...' && [ -f ~/.tmux.conf ] && echo 'Tmux config found!' && echo 'Testing LunarVim...' && [ -d ~/.local/share/lunarvim ] && echo 'LunarVim installed!' && echo 'All tests passed!' || echo 'Tests failed!'"] 
+ENTRYPOINT ["/bin/bash", "-c", "cd /home/testuser/dotfiles && bash install.sh && echo 'Testing tmux configuration...' && [ -f ~/.tmux.conf ] && echo 'Tmux config found!' && echo 'Testing LunarVim...' && [ -d ~/.local/share/lunarvim ] && echo 'LunarVim installed!' && echo 'Testing lazygit...' && [ -f ~/.local/bin/lazygit ] && echo 'lazygit installed!' && echo 'Testing lazydocker...' && [ -f ~/.local/bin/lazydocker ] && echo 'lazydocker installed!' && echo 'All tests passed!' || echo 'Tests failed!'"] 

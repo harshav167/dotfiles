@@ -47,7 +47,150 @@ fi
 # Install packages (brew handles idempotence) - we add the --no-quarantine flag to avoid macOS security prompts
 echo "Installing packages with Homebrew..."
 export HOMEBREW_NO_AUTO_UPDATE=1
-brew install --no-quarantine neovim ripgrep git lazygit lazydocker tmux fd
+
+# First install packages that have good Homebrew support across architectures
+brew install --no-quarantine neovim ripgrep git tmux fd
+
+# Install lazygit and lazydocker directly if Homebrew installation fails
+install_lazygit() {
+    if ! command -v lazygit &>/dev/null; then
+        echo "Installing lazygit directly..."
+
+        # Check if jq is available, if not try to install it
+        if ! command -v jq &>/dev/null; then
+            echo "jq not found, attempting to install it..."
+            if command -v apt-get &>/dev/null; then
+                sudo apt-get update -y && sudo apt-get install -y jq
+            elif command -v brew &>/dev/null; then
+                brew install jq
+            else
+                echo "Warning: Can't install jq, using grep fallback method"
+            fi
+        fi
+
+        # Get latest release version
+        if command -v jq &>/dev/null; then
+            LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | jq -r .tag_name | sed 's/v//')
+        else
+            LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*' || echo "0.40.2")
+        fi
+
+        # If version detection fails, use a fallback version
+        if [ -z "$LAZYGIT_VERSION" ]; then
+            LAZYGIT_VERSION="0.40.2"
+            echo "Failed to detect latest version, using fallback version $LAZYGIT_VERSION"
+        fi
+
+        # Handle architecture differences
+        if [[ $(uname -m) == "x86_64" ]]; then
+            ARCH="x86_64"
+        elif [[ $(uname -m) == "arm64" ]] || [[ $(uname -m) == "aarch64" ]]; then
+            ARCH="arm64"
+        else
+            echo "Unsupported architecture: $(uname -m), trying x86_64"
+            ARCH="x86_64"
+        fi
+
+        # Check OS type
+        if [[ $(uname) == "Darwin" ]]; then
+            OS="Darwin"
+        else
+            OS="Linux"
+        fi
+
+        # Download and install
+        LAZYGIT_URL="https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION}_${OS}_${ARCH}.tar.gz"
+
+        echo "Downloading lazygit from $LAZYGIT_URL"
+        mkdir -p ~/.local/bin
+        curl -L "$LAZYGIT_URL" | tar xz -C /tmp
+        if [ -f /tmp/lazygit ]; then
+            mv /tmp/lazygit ~/.local/bin/
+            chmod +x ~/.local/bin/lazygit
+            echo "lazygit installed to ~/.local/bin/lazygit"
+        else
+            echo "Failed to download lazygit. Check the release URL: $LAZYGIT_URL"
+        fi
+    else
+        echo "lazygit already installed, skipping..."
+    fi
+}
+
+install_lazydocker() {
+    if ! command -v lazydocker &>/dev/null; then
+        echo "Installing lazydocker directly..."
+
+        # Check if jq is available, if not try to install it
+        if ! command -v jq &>/dev/null; then
+            echo "jq not found, attempting to install it..."
+            if command -v apt-get &>/dev/null; then
+                sudo apt-get update -y && sudo apt-get install -y jq
+            elif command -v brew &>/dev/null; then
+                brew install jq
+            else
+                echo "Warning: Can't install jq, using grep fallback method"
+            fi
+        fi
+
+        # Get latest release version
+        if command -v jq &>/dev/null; then
+            LAZYDOCKER_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazydocker/releases/latest" | jq -r .tag_name | sed 's/v//')
+        else
+            LAZYDOCKER_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazydocker/releases/latest" | grep -Po '"tag_name": "v\K[^"]*' || echo "0.23.1")
+        fi
+
+        # If version detection fails, use a fallback version
+        if [ -z "$LAZYDOCKER_VERSION" ]; then
+            LAZYDOCKER_VERSION="0.23.1"
+            echo "Failed to detect latest version, using fallback version $LAZYDOCKER_VERSION"
+        fi
+
+        # Handle architecture differences
+        if [[ $(uname -m) == "x86_64" ]]; then
+            ARCH="x86_64"
+        elif [[ $(uname -m) == "arm64" ]] || [[ $(uname -m) == "aarch64" ]]; then
+            ARCH="arm64"
+        else
+            echo "Unsupported architecture: $(uname -m), trying x86_64"
+            ARCH="x86_64"
+        fi
+
+        # Check OS type
+        if [[ $(uname) == "Darwin" ]]; then
+            OS="Darwin"
+        else
+            OS="Linux"
+        fi
+
+        # Download and install
+        LAZYDOCKER_URL="https://github.com/jesseduffield/lazydocker/releases/download/v${LAZYDOCKER_VERSION}/lazydocker_${LAZYDOCKER_VERSION}_${OS}_${ARCH}.tar.gz"
+
+        echo "Downloading lazydocker from $LAZYDOCKER_URL"
+        mkdir -p ~/.local/bin
+        curl -L "$LAZYDOCKER_URL" | tar xz -C /tmp
+        if [ -f /tmp/lazydocker ]; then
+            mv /tmp/lazydocker ~/.local/bin/
+            chmod +x ~/.local/bin/lazydocker
+            echo "lazydocker installed to ~/.local/bin/lazydocker"
+        else
+            echo "Failed to download lazydocker. Check the release URL: $LAZYDOCKER_URL"
+        fi
+    else
+        echo "lazydocker already installed, skipping..."
+    fi
+}
+
+# Try to install lazygit and lazydocker with brew first
+brew install --no-quarantine lazygit lazydocker 2>/dev/null || true
+
+# If Homebrew installation failed, install them directly
+if ! command -v lazygit &>/dev/null; then
+    install_lazygit
+fi
+
+if ! command -v lazydocker &>/dev/null; then
+    install_lazydocker
+fi
 
 # Setup Python dependencies for LunarVim
 setup_python_deps() {
