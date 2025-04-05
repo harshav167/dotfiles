@@ -49,6 +49,9 @@ brew install neovim ripgrep git lazygit lazydocker tmux fd
 # Setup Python dependencies for LunarVim
 setup_python_deps() {
     echo "Installing Python dependencies for LunarVim globally..."
+    if command -v apt-get &>/dev/null; then
+        sudo apt-get install -y python3-pip
+    fi
     python3 -m pip install --user --break-system-packages pynvim
 }
 
@@ -104,6 +107,46 @@ setup_rust() {
     echo "Cargo version: $(cargo --version)"
 }
 
+# Fix LunarVim TreeSitter compatibility issues
+fix_lunarvim_compatibility() {
+    echo "Fixing potential compatibility issues with LunarVim and newer Neovim versions..."
+
+    if [ -d "$HOME/.local/share/lunarvim" ]; then
+        echo "Updating nvim-treesitter to be compatible with your Neovim version..."
+
+        # Create a temporary script to run with nvim
+        TEMP_SCRIPT=$(mktemp)
+        cat >"$TEMP_SCRIPT" <<'EOF'
+vim.cmd('Lazy sync')
+print("Lazy sync completed")
+
+-- Update nvim-treesitter specifically (if needed)
+local plugins_path = vim.fn.stdpath('data') .. '/site/pack/lazy/opt'
+local treesitter_path = plugins_path .. '/nvim-treesitter'
+
+if vim.fn.isdirectory(treesitter_path) == 1 then
+  vim.fn.system('git -C "' .. treesitter_path .. '" pull origin master --rebase')
+  print("Updated nvim-treesitter from git")
+end
+
+-- Print Neovim version for debugging
+print("Neovim version: " .. vim.version().major .. "." .. vim.version().minor .. "." .. vim.version().patch)
+vim.cmd('quit')
+EOF
+
+        # Run the update script with nvim headless mode
+        echo "Running plugin updates with Neovim in headless mode..."
+        NVIM_APPNAME=lvim nvim --headless -u NONE -c "lua loadfile('$TEMP_SCRIPT')()"
+
+        # Clean up
+        rm "$TEMP_SCRIPT"
+
+        echo "LunarVim compatibility fixes applied."
+    else
+        echo "LunarVim not found, skipping compatibility fixes."
+    fi
+}
+
 # Install LunarVim if not already installed
 if ! command -v lvim &>/dev/null; then
     echo "Installing LunarVim..."
@@ -114,12 +157,18 @@ if ! command -v lvim &>/dev/null; then
 
     # Install LunarVim with the specified branch
     LV_BRANCH='release-1.3/neovim-0.9' bash <(curl -s https://raw.githubusercontent.com/LunarVim/LunarVim/release-1.3/neovim-0.9/utils/installer/install.sh)
+
+    # Fix compatibility issues after installation
+    fix_lunarvim_compatibility
 else
     echo "LunarVim already installed, checking dependencies..."
     # Still ensure dependencies are set up
     setup_python_deps
     setup_nodejs
     setup_rust
+
+    # Fix compatibility issues with existing installation
+    fix_lunarvim_compatibility
 fi
 
 # Create config directories
