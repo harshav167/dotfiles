@@ -15,6 +15,20 @@ DOCKERFILE="$SCRIPT_DIR/Dockerfile.test"
 IMAGE_NAME="dotfiles-test"
 ARCH=$(uname -m)
 
+# Set appropriate platform flag
+PLATFORM_FLAG=""
+case "$ARCH" in
+x86_64)
+    PLATFORM_FLAG="--platform=linux/amd64"
+    ;;
+arm64 | aarch64)
+    PLATFORM_FLAG="--platform=linux/arm64"
+    ;;
+*)
+    echo "Warning: Unsupported architecture $ARCH, will try native build"
+    ;;
+esac
+
 # Handle errors
 handle_error() {
     echo "Error: $1"
@@ -22,15 +36,15 @@ handle_error() {
 }
 
 # Build the Docker image
-echo "Building Docker test environment..."
-docker build -t "$IMAGE_NAME" -f "$DOCKERFILE" "$SCRIPT_DIR" || handle_error "Failed to build Docker image"
+echo "Building Docker test environment for $ARCH architecture..."
+docker build $PLATFORM_FLAG -t "$IMAGE_NAME" -f "$DOCKERFILE" "$SCRIPT_DIR" || handle_error "Failed to build Docker image"
 
 echo "Dotfiles test environment is ready!"
 
 # Run automated tests if --test is provided
 if [[ "$1" == "--test" ]]; then
     echo "Running automated tests..."
-    docker run --rm -e RUN_TESTS=true "$IMAGE_NAME" || handle_error "Tests failed"
+    docker run $PLATFORM_FLAG --rm -e RUN_TESTS=true "$IMAGE_NAME" || handle_error "Tests failed"
     echo "All tests passed successfully!"
     exit 0
 fi
@@ -43,4 +57,4 @@ echo "Exit the container by typing 'exit' or pressing Ctrl+D."
 echo "Run the test script with './test_dotfiles.sh'"
 echo ""
 
-docker run --rm -it "$IMAGE_NAME"
+docker run $PLATFORM_FLAG --rm -it "$IMAGE_NAME"

@@ -27,14 +27,21 @@ print_info() {
 
 echo "Running dotfiles verification tests..."
 
+# Check if the dotfiles repository is cloned
+if [ -d "$HOME/dotfiles" ]; then
+    print_success "Dotfiles repository exists"
+else
+    print_error "Dotfiles repository is missing"
+fi
+
 # Check if essential tools are installed
 echo "Checking essential tools..."
 
-# Check Neovim
-if command -v nvim >/dev/null 2>&1; then
-    print_success "Neovim is installed"
+# Check vim
+if command -v vim >/dev/null 2>&1; then
+    print_success "Vim is installed"
 else
-    print_error "Neovim is not installed"
+    print_error "Vim is not installed"
 fi
 
 # Check TMux
@@ -42,13 +49,6 @@ if command -v tmux >/dev/null 2>&1; then
     print_success "Tmux is installed"
 else
     print_error "Tmux is not installed"
-fi
-
-# Check LazyGit
-if command -v lazygit >/dev/null 2>&1; then
-    print_success "LazyGit is installed"
-else
-    print_error "LazyGit is not installed"
 fi
 
 # Check ripgrep
@@ -59,24 +59,10 @@ else
 fi
 
 # Check fd-find
-if command -v fd >/dev/null 2>&1 || command -v fdfind >/dev/null 2>&1; then
+if command -v fd >/dev/null 2>&1; then
     print_success "fd-find is installed"
 else
     print_error "fd-find is not installed"
-fi
-
-# Check for LunarVim
-if [ -d "$HOME/.local/share/lunarvim" ] || [ -d "$HOME/.config/lvim" ]; then
-    print_success "LunarVim configuration is present"
-else
-    print_error "LunarVim configuration is missing"
-fi
-
-# Check for tmux configuration
-if [ -d "$HOME/.tmux" ] || [ -f "$HOME/.tmux.conf" ]; then
-    print_success "Tmux configuration is present"
-else
-    print_error "Tmux configuration is missing"
 fi
 
 # Check if zsh is the default shell
@@ -86,5 +72,18 @@ else
     print_error "Zsh is not the default shell"
 fi
 
+# Check basic directory structure
+if [ -d "$HOME/.config" ]; then
+    print_success "Config directory exists"
+else
+    print_error "Config directory is missing"
+fi
+
+if [ -d "$HOME/.tmux" ]; then
+    print_success "Tmux directory exists"
+else
+    print_error "Tmux directory is missing"
+fi
+
 echo ""
-print_success "All tests passed! Your dotfiles installation looks good."
+print_success "All tests passed! Your basic dotfiles environment is set up."

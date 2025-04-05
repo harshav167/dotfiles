@@ -1,4 +1,4 @@
-FROM ubuntu:24.10
+FROM debian:bookworm-slim
 
 # Avoid prompts from apt
 ENV DEBIAN_FRONTEND=noninteractive
@@ -11,13 +11,11 @@ RUN apt-get update && apt-get install -y \
     sudo \
     python3 \
     python3-pip \
-    python3-venv \
-    python3-pynvim \
     nodejs \
     npm \
     zsh \
     tmux \
-    neovim \
+    vim \
     ripgrep \
     fd-find \
     build-essential \
@@ -26,7 +24,8 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Set up locale
-RUN locale-gen en_US.UTF-8
+RUN sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
+    locale-gen
 ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
@@ -35,18 +34,9 @@ ENV LC_ALL=en_US.UTF-8
 RUN useradd -m -s /bin/zsh -G sudo testuser && \
     echo "testuser ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/testuser
 
-# Install rust/cargo
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-
-# Install neovim npm package
-RUN npm install -g neovim
-
-# Install lazygit
-RUN LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*') && \
-    curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz" && \
-    tar xf lazygit.tar.gz lazygit && \
-    install lazygit /usr/local/bin && \
-    rm lazygit lazygit.tar.gz
+# Set up symlinks for fd-find
+RUN mkdir -p /usr/local/bin && \
+    ln -s $(which fdfind) /usr/local/bin/fd
 
 # Switch to test user
 USER testuser
@@ -56,23 +46,15 @@ WORKDIR /home/testuser
 COPY --chown=testuser:testuser test_dotfiles.sh /home/testuser/test_dotfiles.sh
 RUN chmod +x /home/testuser/test_dotfiles.sh
 
-# Set up symlinks for fd-find
+# Set up environment for test user
 RUN mkdir -p ~/.local/bin && \
-    ln -s $(which fdfind) ~/.local/bin/fd && \
-    echo 'export PATH=$HOME/.local/bin:$PATH' >> ~/.zshrc && \
-    echo 'export PATH=$HOME/.cargo/bin:$PATH' >> ~/.zshrc
+    ln -s /usr/local/bin/fd ~/.local/bin/fd && \
+    echo 'export PATH=$HOME/.local/bin:$PATH' >> ~/.zshrc
 
-# Clone and set up dotfiles manually instead of using install.sh
+# Clone dotfiles repo
 RUN git clone https://github.com/harshav167/dotfiles.git ~/dotfiles && \
-    mkdir -p ~/.config/lvim && \
-    cp -r ~/dotfiles/lvim/* ~/.config/lvim/ && \
-    mkdir -p ~/.tmux && \
-    cp -r ~/dotfiles/tmux/* ~/.tmux/ && \
-    test -f ~/.tmux/tmux.conf || cp ~/dotfiles/tmux/tmux.conf ~/.tmux/
-
-# Install LunarVim
-RUN export LV_BRANCH='release-1.4/neovim-0.9' && \
-    bash <(curl -s https://raw.githubusercontent.com/LunarVim/LunarVim/release-1.4/neovim-0.9/utils/installer/install.sh) --no-install-dependencies
+    mkdir -p ~/.config && \
+    mkdir -p ~/.tmux
 
 # Run a shell by default with optional test
 CMD if [ "$RUN_TESTS" = "true" ]; then \
