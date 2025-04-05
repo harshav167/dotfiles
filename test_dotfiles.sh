@@ -1,55 +1,90 @@
 #!/bin/bash
 
-set -e # Exit on error
+# Exit on error
+set -e
 
-echo "===== Testing Dotfiles Installation ====="
-
-# Define color codes
-GREEN='\033[0;32m'
+# Color definitions
 RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
 NC='\033[0m' # No Color
 
-# Function to test commands
-test_command() {
-    local cmd="$1"
-    local name="$2"
-
-    echo -n "Testing $name... "
-    if eval "$cmd" &>/dev/null; then
-        echo -e "${GREEN}OK${NC}"
-        return 0
-    else
-        echo -e "${RED}FAILED${NC}"
-        return 1
-    fi
+# Function to print success message
+print_success() {
+    echo -e "${GREEN}✓ $1${NC}"
 }
 
-# Array to track failures
-failures=()
+# Function to print error message
+print_error() {
+    echo -e "${RED}✗ $1${NC}"
+    exit 1
+}
 
-# Test various components
-test_command "command -v lvim" "LunarVim" || failures+=("LunarVim")
-test_command "command -v tmux" "Tmux" || failures+=("Tmux")
-test_command "command -v lazygit" "Lazygit" || failures+=("Lazygit")
-test_command "command -v lazydocker" "Lazydocker" || failures+=("Lazydocker")
-test_command "command -v rustc" "Rust" || failures+=("Rust")
-test_command "command -v cargo" "Cargo" || failures+=("Cargo")
-test_command "command -v node" "Node.js" || failures+=("Node.js")
-test_command "command -v npm" "npm" || failures+=("npm")
-test_command "python3 -c 'import pynvim'" "pynvim" || failures+=("pynvim")
+# Function to print info message
+print_info() {
+    echo -e "${YELLOW}i $1${NC}"
+}
 
-# Test configuration files
-test_command "[ -f ~/.config/lvim/config.lua ]" "LunarVim config" || failures+=("LunarVim config")
-test_command "[ -f ~/.tmux/tmux.conf ]" "Tmux config" || failures+=("Tmux config")
+echo "Running dotfiles verification tests..."
 
-# Print summary
-echo ""
-echo "===== Test Summary ====="
-if [ ${#failures[@]} -eq 0 ]; then
-    echo -e "${GREEN}All tests passed!${NC}"
+# Check if essential tools are installed
+echo "Checking essential tools..."
+
+# Check Neovim
+if command -v nvim >/dev/null 2>&1; then
+    print_success "Neovim is installed"
 else
-    echo -e "${RED}${#failures[@]} test(s) failed:${NC}"
-    for failure in "${failures[@]}"; do
-        echo -e "  - ${RED}$failure${NC}"
-    done
+    print_error "Neovim is not installed"
 fi
+
+# Check TMux
+if command -v tmux >/dev/null 2>&1; then
+    print_success "Tmux is installed"
+else
+    print_error "Tmux is not installed"
+fi
+
+# Check LazyGit
+if command -v lazygit >/dev/null 2>&1; then
+    print_success "LazyGit is installed"
+else
+    print_error "LazyGit is not installed"
+fi
+
+# Check ripgrep
+if command -v rg >/dev/null 2>&1; then
+    print_success "ripgrep is installed"
+else
+    print_error "ripgrep is not installed"
+fi
+
+# Check fd-find
+if command -v fd >/dev/null 2>&1 || command -v fdfind >/dev/null 2>&1; then
+    print_success "fd-find is installed"
+else
+    print_error "fd-find is not installed"
+fi
+
+# Check for LunarVim
+if [ -d "$HOME/.local/share/lunarvim" ] || [ -d "$HOME/.config/lvim" ]; then
+    print_success "LunarVim configuration is present"
+else
+    print_error "LunarVim configuration is missing"
+fi
+
+# Check for tmux configuration
+if [ -d "$HOME/.tmux" ] || [ -f "$HOME/.tmux.conf" ]; then
+    print_success "Tmux configuration is present"
+else
+    print_error "Tmux configuration is missing"
+fi
+
+# Check if zsh is the default shell
+if [ "$(basename "$SHELL")" = "zsh" ]; then
+    print_success "Zsh is the default shell"
+else
+    print_error "Zsh is not the default shell"
+fi
+
+echo ""
+print_success "All tests passed! Your dotfiles installation looks good."

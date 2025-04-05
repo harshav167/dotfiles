@@ -1,51 +1,46 @@
 #!/bin/bash
 
-set -e # Exit on error
+# Exit on error
+set -e
 
-# Check if Docker is available
+# Check for Docker
 if ! command -v docker &>/dev/null; then
-    echo "Error: Docker is not installed or not in PATH"
+    echo "Error: Docker is not installed or not found in PATH"
     exit 1
 fi
 
-# Check if automated testing is requested
-AUTOMATED_TEST=false
-if [ "$1" = "--test" ]; then
-    AUTOMATED_TEST=true
-fi
+# Variables
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DOCKERFILE="$SCRIPT_DIR/Dockerfile.test"
+IMAGE_NAME="dotfiles-test"
+ARCH=$(uname -m)
 
-# Function to handle errors
+# Handle errors
 handle_error() {
     echo "Error: $1"
     exit 1
 }
 
-echo "==== Building Docker test container ===="
-docker build -t dotfiles-test -f Dockerfile.test . || handle_error "Failed to build Docker image"
+# Build the Docker image
+echo "Building Docker test environment..."
+docker build -t "$IMAGE_NAME" -f "$DOCKERFILE" "$SCRIPT_DIR" || handle_error "Failed to build Docker image"
 
-if [ "$AUTOMATED_TEST" = "true" ]; then
-    echo "==== Running automated tests ===="
-    docker run --rm -e RUN_TESTS=true dotfiles-test || handle_error "Tests failed"
-    echo "==== Automated tests completed successfully ===="
-else
-    echo "==== Running Docker test container in interactive mode ===="
-    echo "Once inside the container, you can test that your dotfiles are correctly installed."
-    echo "To exit the container, type 'exit' or press Ctrl+D."
-    echo ""
-    echo "====== Commands to test in container ======"
-    echo "lvim --version                 # Check LunarVim version"
-    echo "tmux -V                        # Check tmux version"
-    echo "lazygit --version              # Check lazygit version"
-    echo "which lazydocker               # Check lazydocker is in PATH"
-    echo "rustc --version                # Check Rust is installed"
-    echo "node --version                 # Check Node.js is installed"
-    echo "python3 -c 'import pynvim'     # Check pynvim is installed"
-    echo "./test_dotfiles.sh             # Run the automated test script"
-    echo "======================================="
-    echo ""
+echo "Dotfiles test environment is ready!"
 
-    # Start interactive shell in container
-    docker run -it --rm dotfiles-test || handle_error "Failed to run Docker container"
+# Run automated tests if --test is provided
+if [[ "$1" == "--test" ]]; then
+    echo "Running automated tests..."
+    docker run --rm -e RUN_TESTS=true "$IMAGE_NAME" || handle_error "Tests failed"
+    echo "All tests passed successfully!"
+    exit 0
 fi
 
-echo "Docker test completed successfully"
+# Run in interactive mode
+echo "Starting interactive test shell..."
+echo ""
+echo "You can test your dotfiles within the container."
+echo "Exit the container by typing 'exit' or pressing Ctrl+D."
+echo "Run the test script with './test_dotfiles.sh'"
+echo ""
+
+docker run --rm -it "$IMAGE_NAME"
