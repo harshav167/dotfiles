@@ -114,32 +114,29 @@ fix_lunarvim_compatibility() {
     if [ -d "$HOME/.local/share/lunarvim" ]; then
         echo "Updating nvim-treesitter to be compatible with your Neovim version..."
 
-        # Create a temporary script to run with nvim
-        TEMP_SCRIPT=$(mktemp)
-        cat >"$TEMP_SCRIPT" <<'EOF'
-vim.cmd('Lazy sync')
-print("Lazy sync completed")
+        # Define the path to nvim-treesitter
+        TREESITTER_PATH="$HOME/.local/share/lunarvim/site/pack/lazy/opt/nvim-treesitter"
 
--- Update nvim-treesitter specifically (if needed)
-local plugins_path = vim.fn.stdpath('data') .. '/site/pack/lazy/opt'
-local treesitter_path = plugins_path .. '/nvim-treesitter'
+        if [ -d "$TREESITTER_PATH" ]; then
+            echo "Found nvim-treesitter at $TREESITTER_PATH"
+            echo "Updating nvim-treesitter from git..."
+            git -C "$TREESITTER_PATH" pull origin master --rebase
+            echo "nvim-treesitter updated successfully."
+        else
+            echo "nvim-treesitter not found at expected location. Checking for alternative paths..."
 
-if vim.fn.isdirectory(treesitter_path) == 1 then
-  vim.fn.system('git -C "' .. treesitter_path .. '" pull origin master --rebase')
-  print("Updated nvim-treesitter from git")
-end
+            # Try to find nvim-treesitter in other possible locations
+            ALTERNATIVE_PATH=$(find "$HOME/.local/share/lunarvim" -type d -name "nvim-treesitter" | head -n 1)
 
--- Print Neovim version for debugging
-print("Neovim version: " .. vim.version().major .. "." .. vim.version().minor .. "." .. vim.version().patch)
-vim.cmd('quit')
-EOF
-
-        # Run the update script with nvim headless mode
-        echo "Running plugin updates with Neovim in headless mode..."
-        NVIM_APPNAME=lvim nvim --headless -u NONE -c "lua loadfile('$TEMP_SCRIPT')()"
-
-        # Clean up
-        rm "$TEMP_SCRIPT"
+            if [ -n "$ALTERNATIVE_PATH" ]; then
+                echo "Found nvim-treesitter at $ALTERNATIVE_PATH"
+                echo "Updating nvim-treesitter from git..."
+                git -C "$ALTERNATIVE_PATH" pull origin master --rebase
+                echo "nvim-treesitter updated successfully."
+            else
+                echo "Could not locate nvim-treesitter directory. Skipping update."
+            fi
+        fi
 
         echo "LunarVim compatibility fixes applied."
     else
