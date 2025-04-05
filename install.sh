@@ -52,18 +52,51 @@ setup_python_deps() {
     python3 -m pip install --user --break-system-packages pynvim
 }
 
+# Setup Node.js with nvm for LunarVim
+setup_nodejs() {
+    echo "Setting up Node.js with nvm for LunarVim..."
+
+    # Install nvm if not already installed
+    if [ ! -d "$HOME/.nvm" ]; then
+        echo "Installing nvm..."
+        curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+
+        # Load nvm immediately for this script
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    else
+        echo "nvm already installed, loading it..."
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    fi
+
+    # Install latest Node.js if not already installed
+    if ! command -v node &>/dev/null || [ "$(node -v)" != "$(nvm version-remote --lts)" ]; then
+        echo "Installing latest LTS Node.js..."
+        nvm install --lts
+        nvm use --lts
+        nvm alias default node
+    fi
+
+    # Install neovim npm package
+    echo "Installing neovim npm package..."
+    npm install -g neovim
+}
+
 # Install LunarVim if not already installed
 if ! command -v lvim &>/dev/null; then
     echo "Installing LunarVim..."
-    # Setup Python dependencies first
+    # Setup dependencies first
     setup_python_deps
+    setup_nodejs
 
     # Install LunarVim with the specified branch
     LV_BRANCH='release-1.3/neovim-0.9' bash <(curl -s https://raw.githubusercontent.com/LunarVim/LunarVim/release-1.3/neovim-0.9/utils/installer/install.sh)
 else
-    echo "LunarVim already installed, skipping installation."
-    # Still ensure Python dependencies are set up
+    echo "LunarVim already installed, checking dependencies..."
+    # Still ensure dependencies are set up
     setup_python_deps
+    setup_nodejs
 fi
 
 # Create config directories
